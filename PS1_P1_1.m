@@ -13,7 +13,7 @@ y = zeros(M, T);
 rng(42) 
 
 for i = 1:M
-        epsilon = 0 + gammasqr * randn(1, T);
+        epsilon = 0 + sqrt(gammasqr) * randn(1, T);
     for j = 1:T-1
         y(i,1) = y_mean + epsilon(1);
         y(i,j + 1) = mu + Phi * y(i, j) + epsilon(j + 1);
@@ -213,5 +213,91 @@ for t = end_est:(T-1)
     end
 end
 
+%% 6
+for t = end_est:(T-1)
+
+    % Predict using the most recent value and the true model(mu and phi)
+    ypred4 = zeros(pred_period, 1);
+    for pt = 1:pred_period
+        % if predict t > T, use NaN since there's no mu value
+        if t + pt > T 
+            ypred4(pt, 1) = NaN;
+            continue
+        end
+        % Iterate tp make prediction
+        if pt == 1
+            yprev = y(t, 1);
+        else
+            yprev = ypred4(pt-1, 1);
+        end
+        ypred4(pt, 1) = mu_series(t+pt, 1) + phi * yprev; 
+    end
+
+    if t == end_est
+        Ypred4 = ypred4;
+    else
+        Ypred4 = [Ypred4 ypred4];
+    end
+end
+
+%% 7 
+for t = end_est:(T-1)
+    ytrue5 = zeros(pred_period, 1);
+    for pt = 1:pred_period
+        % if predict t > T, use NaN since there's no mu value
+        if t + pt > T 
+            ytrue5(pt, 1) = NaN;
+            continue
+        end
+        % Iterate tp make prediction
+        ytrue5(pt, 1) = y(t+pt, 1); 
+    end
+
+    if t == end_est
+        Ytrue5 = ytrue5;
+    else
+        Ytrue5 = [Ytrue5 ytrue5];
+    end
+end
+%% 7
+[mae1, rmse1] = calcAccuracy(Ypred1, Ytrue5);
+[mae2, rmse2] = calcAccuracy(Ypred2, Ytrue5);
+[mae3, rmse3] = calcAccuracy(Ypred3, Ytrue5);
+[mae4, rmse4] = calcAccuracy(Ypred4, Ytrue5);
+
+mae_ratio1 = mae1 ./ mae4;
+mae_ratio2 = mae2 ./ mae4;
+mae_ratio3 = mae3 ./ mae4;
+
+rmse_ratio1 = rmse1 ./ rmse4;
+rmse_ratio2 = rmse2 ./ rmse4;
+rmse_ratio3 = rmse3 ./ rmse4;
 
 
+%% Plot MAE amd RMSE 
+tiledlayout(2, 1)
+
+% MAE
+ax1 = nexttile;
+plot(ax1, 1:pred_period, mae_ratio1, 'DisplayName','Researcher 1: OLS + Expanding Window (Constant Mean)','LineWidth', 1.5)
+hold on
+plot(ax1, 1:pred_period, mae_ratio2, 'DisplayName','Researcher 2: OLS + Rolling Window (Time-varying Mean)','LineWidth', 1.5)
+plot(ax1, 1:pred_period, mae_ratio3, 'DisplayName','Researcher 3: Random Walk','LineWidth', 1.5)
+title(ax1, 'MAE')
+grid(ax1,'on')
+hold off
+legend('Location', 'northwest');
+ax1.FontSize = 18;
+
+% RMSE
+ax2 = nexttile;
+plot(ax2, 1:pred_period, rmse_ratio1, 'DisplayName','Researcher 1: OLS + Expanding Window (Constant Mean)','LineWidth', 1.5)
+hold on
+plot(ax2, 1:pred_period, rmse_ratio2, 'DisplayName','Researcher 2: OLS + Rolling Window (Time-varying Mean)','LineWidth', 1.5)
+plot(ax2, 1:pred_period, rmse_ratio3, 'DisplayName','Researcher 3: Random Walk','LineWidth', 1.5)
+title(ax2, 'RMSE')
+grid(ax2,'on')
+hold off
+legend('Location', 'northwest');
+
+ax2.FontSize = 18;
